@@ -18,7 +18,6 @@ GPATH
 GRTAGS
 GSYMS
 GTAGS
-.clang-format
 CMakeLists.txt.user*
 /build*/
 .idea
