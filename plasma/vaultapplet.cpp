@@ -11,6 +11,7 @@
 #include <PlasmaActivities/Consumer>
 #include <klocalizedstring.h>
 
+#include "plasmavault_interface.h"
 #include "vaultsmodel.h"
 
 VaultApplet::VaultApplet(QObject *parent, const KPluginMetaData &data, const QVariantList &args)
@@ -22,11 +23,20 @@ VaultApplet::~VaultApplet()
 {
 }
 
+void VaultApplet::restoreNetworking()
+{
+    // The daemon owns networking inhibition and can safely decide whether to restore it.
+    org::kde::plasmavault service("org.kde.kded6", "/modules/plasmavault", QDBusConnection::sessionBus());
+    service.restoreNetworking();
+}
+
 QObject *VaultApplet::vaultsModel()
 {
     if (!m_vaultsModel) {
         m_vaultsModel = new SortedVaultsModelProxy(this);
     }
+
+    restoreNetworking();
 
     return m_vaultsModel;
 }

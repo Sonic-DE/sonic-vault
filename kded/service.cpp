@@ -84,7 +84,7 @@ public:
             return;
         }
 
-        savedNetworkingState = Expected<NetworkingState, int>::success(NetworkingState{NetworkManager::isNetworkingEnabled() || true, {}});
+        savedNetworkingState = Expected<NetworkingState, int>::success(NetworkingState{NetworkManager::isNetworkingEnabled(), {}});
     }
 
     void restoreNetworkingState()
@@ -97,9 +97,11 @@ public:
 
         NetworkManager::setNetworkingEnabled(savedNetworkingState->wasNetworkingEnabled);
 
-        auto config = KSharedConfig::openConfig(PLASMAVAULT_CONFIG_FILE);
+        auto config = KSharedConfig::openStateConfig(PLASMAVAULT_CONFIG_FILE);
         KConfigGroup configGroup(config, "NetworkingConfig");
-        configGroup.deleteEntry("is-networking-inhibited");    
+        configGroup.deleteEntry("is-networking-inhibited");
+        configGroup.sync();
+        savedNetworkingState = Expected<NetworkingState, int>::error(0);
     }
 
     Vault *vaultFor(const QString &device_) const
@@ -149,19 +151,34 @@ PlasmaVaultService::PlasmaVaultService(QObject *parent, const QVariantList &)
 
     onActivitiesChanged(d->kamd.activities());
 
+    restoreNetworking();
+}
+
+void PlasmaVaultService::restoreNetworking()
+{
+    if (d->savedNetworkingState && !d->savedNetworkingState->devicesInhibittingNetworking.isEmpty()) {
+        return;
+    }
+
+    for (const auto* vault : d->knownVaults) {
+        if (vault->isOfflineOnly() && vault->isOpened()) {
+            return;
+        }
+    }
+
     // Bug #457680: Restore networking when the vault hasn't been closed before shutting down
     KSharedConfigPtr networkingConfig = KSharedConfig::openConfig("plasma-nm");
     KConfigGroup generalGroup(networkingConfig, "General");
     const bool airplaneModeWasEnabled = generalGroup.readEntry(("AirplaneModeEnabled"), false);
 
-    if (!airplaneModeWasEnabled)
-    {
+    if (!airplaneModeWasEnabled) {
         auto config = KSharedConfig::openStateConfig(PLASMAVAULT_CONFIG_FILE);
         KConfigGroup configGroup(config, "NetworkingConfig");
 
         if (configGroup.readEntry("is-networking-inhibited", false)) {
             NetworkManager::setNetworkingEnabled(true);
             configGroup.deleteEntry("is-networking-inhibited");
+            configGroup.sync();
         }
     }
 }
@@ -289,7 +306,7 @@ void PlasmaVaultService::onVaultStatusChanged(VaultInfo::Status status)
 
             auto config = KSharedConfig::openStateConfig(PLASMAVAULT_CONFIG_FILE);
             KConfigGroup configGroup(config, "NetworkingConfig");
-            configGroup.writeEntry("is-networking-inhibited", true);
+            configGroup.writeEntry("is-networking-inhibited", d->savedNetworkingState->wasNetworkingEnabled);
             configGroup.sync();
         }
 
@@ -346,6 +363,11 @@ void PlasmaVaultService::openVault(const QString &device)
             }
 
             NetworkManager::setNetworkingEnabled(false);
+
+            auto config = KSharedConfig::openStateConfig(PLASMAVAULT_CONFIG_FILE);
+            KConfigGroup configGroup(config, "NetworkingConfig");
+            configGroup.writeEntry("is-networking-inhibited", d->savedNetworkingState->wasNetworkingEnabled);
+            configGroup.sync();
         }
 
         auto stopInhibiting = [this, vault] {

@@ -51,6 +51,8 @@
     </method>
     <method name="updateStatus">
     </method>
+    <method name="restoreNetworking">
+    </method>
   </interface>
 
 </node>

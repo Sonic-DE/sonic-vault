@@ -42,6 +42,7 @@ public Q_SLOTS:
     Q_SCRIPTABLE void deleteVault(const QString &device, const QString &name);
 
     Q_SCRIPTABLE void updateStatus();
+    Q_SCRIPTABLE void restoreNetworking();
 
 Q_SIGNALS:
     void registered();
