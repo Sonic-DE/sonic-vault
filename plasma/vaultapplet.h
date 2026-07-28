@@ -22,6 +22,9 @@ public:
     explicit VaultApplet(QObject *parent, const KPluginMetaData &data, const QVariantList &args);
     ~VaultApplet() override;
 
+    // Ask the daemon to recover networking after an interrupted offline-vault session.
+    void restoreNetworking();
+
     QObject *vaultsModel();
 
 private:
