@@ -107,6 +107,11 @@ add_subdirectory(plasma)
 add_subdirectory(icons)
 add_subdirectory(fileitemplugin)
 
+if(BUILD_TESTING)
+    find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS Test)
+    add_subdirectory(autotests)
+endif()
+
 # add clang-format target for all our real source files
 file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES *.cpp *.h)
 list(FILTER ALL_CLANG_FORMAT_SOURCE_FILES EXCLUDE REGEX ".*\\.ccls-cache/.*")
